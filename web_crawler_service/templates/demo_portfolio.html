@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🕷️ 크롤링 마스터 포트폴리오</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <style>
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.5); }
+            50% { box-shadow: 0 0 40px rgba(59, 130, 246, 0.8); }
+        }
+        .glow-effect { animation: pulse-glow 2s infinite; }
+        
+        .demo-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .demo-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        
+        .success-animation {
+            animation: success-pulse 0.5s ease-out;
+        }
+        
+        @keyframes success-pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .loading-dots::after {
+            content: '';
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+        
+        @keyframes dots {
+            0%, 20% { content: ''; }
+            40% { content: '.'; }
+            60% { content: '..'; }
+            80%, 100% { content: '...'; }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 min-h-screen text-white">
+    <div class="container mx-auto px-4 py-8" x-data="portfolioApp()">
+        
+        <!-- 헤더 -->
+        <header class="text-center mb-12">
+            <h1 class="text-5xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-600">
+                🕷️ 크롤링 마스터 포트폴리오
+            </h1>
+            <p class="text-xl text-gray-300">원클릭으로 실행되는 크롤링 기술 데모</p>
+            <div class="mt-6 flex justify-center space-x-4">
+                <span class="px-4 py-2 bg-green-500/20 border border-green-500 rounded-full text-green-400">
+                    ✅ 즉시 실행 가능
+                </span>
+                <span class="px-4 py-2 bg-blue-500/20 border border-blue-500 rounded-full text-blue-400">
+                    📊 실시간 결과 확인
+                </span>
+                <span class="px-4 py-2 bg-purple-500/20 border border-purple-500 rounded-full text-purple-400">
+                    💾 엑셀 다운로드
+                </span>
+            </div>
+        </header>
+
+        <!-- TDD 테스트 섹션 -->
+        <div class="mb-8 p-6 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-2xl font-bold flex items-center">
+                    🧪 TDD 테스트 스위트
+                    <span class="ml-3 text-sm px-3 py-1 bg-yellow-500/20 border border-yellow-500 rounded-full text-yellow-400">
+                        <span x-text="testResults.total || '0'"></span> Tests
+                    </span>
+                </h2>
+                <button @click="runTests()" 
+                        class="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg font-semibold hover:from-green-600 hover:to-emerald-700 transition-all duration-300 flex items-center space-x-2"
+                        :disabled="testRunning">
+                    <svg x-show="!testRunning" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <svg x-show="testRunning" class="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span x-text="testRunning ? '테스트 실행 중...' : '모든 테스트 실행'"></span>
+                </button>
+            </div>
+            
+            <div x-show="testResults.status" class="mt-4">
+                <div class="flex space-x-4 mb-3">
+                    <span class="px-3 py-1 bg-green-500/20 border border-green-500 rounded text-green-400">
+                        ✅ 성공: <span x-text="testResults.passed || 0"></span>
+                    </span>
+                    <span class="px-3 py-1 bg-red-500/20 border border-red-500 rounded text-red-400">
+                        ❌ 실패: <span x-text="testResults.failed || 0"></span>
+                    </span>
+                    <span class="px-3 py-1 bg-blue-500/20 border border-blue-500 rounded text-blue-400">
+                        📊 전체: <span x-text="testResults.total || 0"></span>
+                    </span>
+                </div>
+                <div x-show="testResults.output" class="bg-black/50 p-4 rounded-lg font-mono text-xs text-green-400 max-h-60 overflow-y-auto">
+                    <pre x-text="testResults.output"></pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- 데모 카드 그리드 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            
+            <!-- 1. 기본 크롤러 -->
+            <div class="demo-card bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
+                <div class="flex items-center mb-4">
+                    <span class="text-3xl mr-3">🌐</span>
+                    <h3 class="text-xl font-bold">기본 BeautifulSoup 크롤러</h3>
+                </div>
+                <p class="text-gray-300 mb-4">네이버 IT 뉴스를 실시간으로 크롤링합니다.</p>
+                <ul class="text-sm text-gray-400 mb-4 space-y-1">
+                    <li>• HTML 파싱</li>
+                    <li>• CSS 선택자 활용</li>
+                    <li>• 데이터 정형화</li>
+                </ul>
+                <button @click="runDemo('basic')" 
+                        class="w-full py-3 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg font-semibold hover:from-blue-600 hover:to-blue-700 transition-all duration-300"
+                        :class="{ 'success-animation': demos.basic?.status === 'success' }">
+                    <span x-show="!demos.basic?.loading">🚀 실행하기</span>
+                    <span x-show="demos.basic?.loading" class="loading-dots">실행 중</span>
+                </button>
+                <div x-show="demos.basic?.result" class="mt-4 p-3 bg-black/30 rounded-lg text-sm">
+                    <p x-text="demos.basic?.result?.message"></p>
+                    <button x-show="demos.basic?.result?.file" 
+                            @click="downloadFile(demos.basic.result.file)"
+                            class="mt-2 text-blue-400 hover:text-blue-300">
+                        📥 결과 다운로드
+                    </button>
+                </div>
+            </div>
+
+            <!-- 2. API 크롤러 -->
+            <div class="demo-card bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
+                <div class="flex items-center mb-4">
+                    <span class="text-3xl mr-3">🔌</span>
+                    <h3 class="text-xl font-bold">API 직접 호출</h3>
+                </div>
+                <p class="text-gray-300 mb-4">GitHub API로 인기 Python 레포지토리를 수집합니다.</p>
+                <ul class="text-sm text-gray-400 mb-4 space-y-1">
+                    <li>• RESTful API 활용</li>
+                    <li>• JSON 데이터 처리</li>
+                    <li>• Rate Limiting 처리</li>
+                </ul>
+                <button @click="runDemo('api')" 
+                        class="w-full py-3 bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg font-semibold hover:from-purple-600 hover:to-purple-700 transition-all duration-300"
+                        :class="{ 'success-animation': demos.api?.status === 'success' }">
+                    <span x-show="!demos.api?.loading">🚀 실행하기</span>
+                    <span x-show="demos.api?.loading" class="loading-dots">실행 중</span>
+                </button>
+                <div x-show="demos.api?.result" class="mt-4 p-3 bg-black/30 rounded-lg text-sm">
+                    <p x-text="demos.api?.result?.message"></p>
+                    <button x-show="demos.api?.result?.file" 
+                            @click="downloadFile(demos.api.result.file)"
+                            class="mt-2 text-purple-400 hover:text-purple-300">
+                        📥 결과 다운로드
+                    </button>
+                </div>
+            </div>
+
+            <!-- 3. 비동기 크롤러 -->
+            <div class="demo-card bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
+                <div class="flex items-center mb-4">
+                    <span class="text-3xl mr-3">⚡</span>
+                    <h3 class="text-xl font-bold">비동기 멀티 크롤링</h3>
+                </div>
+                <p class="text-gray-300 mb-4">여러 사이트를 동시에 고속 크롤링합니다.</p>
+                <ul class="text-sm text-gray-400 mb-4 space-y-1">
+                    <li>• asyncio 동시 처리</li>
+                    <li>• 멀티 사이트 크롤링</li>
+                    <li>• 성능 최적화</li>
+                </ul>
+                <button @click="runDemo('async')" 
+                        class="w-full py-3 bg-gradient-to-r from-green-500 to-green-600 rounded-lg font-semibold hover:from-green-600 hover:to-green-700 transition-all duration-300"
+                        :class="{ 'success-animation': demos.async?.status === 'success' }">
+                    <span x-show="!demos.async?.loading">🚀 실행하기</span>
+                    <span x-show="demos.async?.loading" class="loading-dots">실행 중</span>
+                </button>
+                <div x-show="demos.async?.result" class="mt-4 p-3 bg-black/30 rounded-lg text-sm">
+                    <p x-text="demos.async?.result?.message"></p>
+                    <button x-show="demos.async?.result?.file" 
+                            @click="downloadFile(demos.async.result.file)"
+                            class="mt-2 text-green-400 hover:text-green-300">
+                        📥 결과 다운로드
+                    </button>
+                </div>
+            </div>
+
+            <!-- 4. 스마트 선택자 -->
+            <div class="demo-card bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
+                <div class="flex items-center mb-4">
+                    <span class="text-3xl mr-3">🎯</span>
+                    <h3 class="text-xl font-bold">스마트 선택자 감지</h3>
+                </div>
+                <p class="text-gray-300 mb-4">웹페이지 구조를 자동 분석하여 데이터를 추출합니다.</p>
+                <ul class="text-sm text-gray-400 mb-4 space-y-1">
+                    <li>• 자동 패턴 인식</li>
+                    <li>• CSS 선택자 생성</li>
+                    <li>• 구조 분석 AI</li>
+                </ul>
+                <button @click="runDemo('smart')" 
+                        class="w-full py-3 bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-lg font-semibold hover:from-yellow-600 hover:to-yellow-700 transition-all duration-300"
+                        :class="{ 'success-animation': demos.smart?.status === 'success' }">
+                    <span x-show="!demos.smart?.loading">🚀 실행하기</span>
+                    <span x-show="demos.smart?.loading" class="loading-dots">실행 중</span>
+                </button>
+                <div x-show="demos.smart?.result" class="mt-4 p-3 bg-black/30 rounded-lg text-sm">
+                    <p x-text="demos.smart?.result?.message"></p>
+                    <div x-show="demos.smart?.result?.selectors" class="mt-2 text-xs">
+                        <p class="text-yellow-400">감지된 선택자:</p>
+                        <pre x-text="JSON.stringify(demos.smart?.result?.selectors, null, 2)" class="text-gray-300"></pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 5. 데이터 정제 -->
+            <div class="demo-card bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
+                <div class="flex items-center mb-4">
+                    <span class="text-3xl mr-3">🧹</span>
+                    <h3 class="text-xl font-bold">데이터 정제 & 변환</h3>
+                </div>
+                <p class="text-gray-300 mb-4">더러운 데이터를 깨끗하게 정제하고 표준화합니다.</p>
+                <ul class="text-sm text-gray-400 mb-4 space-y-1">
+                    <li>• XSS 방지 처리</li>
+                    <li>• 날짜/가격 표준화</li>
+                    <li>• 이상치 처리</li>
+                </ul>
+                <button @click="runDemo('cleaning')" 
+                        class="w-full py-3 bg-gradient-to-r from-pink-500 to-pink-600 rounded-lg font-semibold hover:from-pink-600 hover:to-pink-700 transition-all duration-300"
+                        :class="{ 'success-animation': demos.cleaning?.status === 'success' }">
+                    <span x-show="!demos.cleaning?.loading">🚀 실행하기</span>
+                    <span x-show="demos.cleaning?.loading" class="loading-dots">실행 중</span>
+                </button>
+                <div x-show="demos.cleaning?.result" class="mt-4 p-3 bg-black/30 rounded-lg text-sm">
+                    <p x-text="demos.cleaning?.result?.message"></p>
+                    <button x-show="demos.cleaning?.result?.file" 
+                            @click="downloadFile(demos.cleaning.result.file)"
+                            class="mt-2 text-pink-400 hover:text-pink-300">
+                        📥 Before/After 다운로드
+                    </button>
+                </div>
+            </div>
+
+            <!-- 6. 실시간 모니터링 -->
+            <div class="demo-card bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
+                <div class="flex items-center mb-4">
+                    <span class="text-3xl mr-3">📊</span>
+                    <h3 class="text-xl font-bold">실시간 대시보드</h3>
+                </div>
+                <p class="text-gray-300 mb-4">크롤링 진행 상황을 실시간으로 모니터링합니다.</p>
+                <ul class="text-sm text-gray-400 mb-4 space-y-1">
+                    <li>• WebSocket 실시간 통신</li>
+                    <li>• 진행률 시각화</li>
+                    <li>• 에러 추적</li>
+                </ul>
+                <a href="http://localhost:8000" target="_blank"
+                   class="block w-full py-3 bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-lg font-semibold hover:from-indigo-600 hover:to-indigo-700 transition-all duration-300 text-center">
+                    🔗 대시보드 열기
+                </a>
+            </div>
+
+        </div>
+
+        <!-- 기술 스택 -->
+        <div class="mt-12 p-6 bg-white/10 backdrop-blur-md rounded-2xl border border-white/20">
+            <h2 class="text-2xl font-bold mb-6 text-center">🛠️ 기술 스택</h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                <div class="text-center p-3 bg-black/30 rounded-lg">
+                    <span class="text-2xl">🐍</span>
+                    <p class="mt-1 text-sm">Python</p>
+                </div>
+                <div class="text-center p-3 bg-black/30 rounded-lg">
+                    <span class="text-2xl">⚡</span>
+                    <p class="mt-1 text-sm">FastAPI</p>
+                </div>
+                <div class="text-center p-3 bg-black/30 rounded-lg">
+                    <span class="text-2xl">🍲</span>
+                    <p class="mt-1 text-sm">BeautifulSoup</p>
+                </div>
+                <div class="text-center p-3 bg-black/30 rounded-lg">
+                    <span class="text-2xl">🌐</span>
+                    <p class="mt-1 text-sm">Selenium</p>
+                </div>
+                <div class="text-center p-3 bg-black/30 rounded-lg">
+                    <span class="text-2xl">🐼</span>
+                    <p class="mt-1 text-sm">Pandas</p>
+                </div>
+                <div class="text-center p-3 bg-black/30 rounded-lg">
+                    <span class="text-2xl">🔄</span>
+                    <p class="mt-1 text-sm">Asyncio</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 푸터 -->
+        <footer class="mt-12 text-center text-gray-400">
+            <p>Made with ❤️ for 크몽 freelancers</p>
+            <p class="mt-2 text-sm">© 2024 크롤링 마스터 포트폴리오</p>
+        </footer>
+
+    </div>
+
+    <script>
+        function portfolioApp() {
+            return {
+                demos: {},
+                testResults: {},
+                testRunning: false,
+                
+                async runDemo(type) {
+                    this.demos[type] = { loading: true };
+                    
+                    try {
+                        const response = await fetch(`/demo/run/${type}`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' }
+                        });
+                        const data = await response.json();
+                        
+                        this.demos[type] = {
+                            loading: false,
+                            status: data.status,
+                            result: data
+                        };
+                        
+                        // 성공 시 애니메이션
+                        if (data.status === 'success') {
+                            setTimeout(() => {
+                                this.demos[type].status = null;
+                            }, 500);
+                        }
+                    } catch (error) {
+                        this.demos[type] = {
+                            loading: false,
+                            status: 'error',
+                            result: { message: '❌ 오류가 발생했습니다: ' + error.message }
+                        };
+                    }
+                },
+                
+                async runTests() {
+                    this.testRunning = true;
+                    
+                    try {
+                        const response = await fetch('/test/run');
+                        const data = await response.json();
+                        this.testResults = data;
+                    } catch (error) {
+                        this.testResults = {
+                            status: 'error',
+                            message: '테스트 실행 실패: ' + error.message
+                        };
+                    } finally {
+                        this.testRunning = false;
+                    }
+                },
+                
+                downloadFile(filename) {
+                    window.open(`/demo/download/${filename}`, '_blank');
+                }
+            }
+        }
+    </script>
+</body>
+</html>

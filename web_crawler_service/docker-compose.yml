@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    container_name: crawling-master
+    ports:
+      - "8000:8000"
+    volumes:
+      # 코드 변경사항 실시간 반영
+      - ./simple_main.py:/app/simple_main.py
+      - ./templates:/app/templates
+      # 다운로드 파일 영구 저장
+      - ./downloads:/app/downloads
+    environment:
+      - PYTHONUNBUFFERED=1
+      - TZ=Asia/Seoul
+    restart: unless-stopped
+    networks:
+      - crawler-network
+
+networks:
+  crawler-network:
+    driver: bridge

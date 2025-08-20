@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Project specific
+downloads/*.xlsx
+downloads/*.csv
+downloads/*.json
+*.log
+.env
+
+# Temporary files
+*.tmp
+*.bak
+*.backup
+temp/
+tmp/

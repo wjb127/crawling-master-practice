@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>크롤링 마스터 🕷️</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <style>
+        [x-cloak] { display: none !important; }
+        .htmx-indicator { opacity: 0; transition: opacity 300ms; }
+        .htmx-request .htmx-indicator { opacity: 1; }
+        .htmx-request.htmx-indicator { opacity: 1; }
+        
+        /* 커스텀 애니메이션 */
+        @keyframes pulse-border {
+            0%, 100% { border-color: rgb(59, 130, 246); }
+            50% { border-color: rgb(147, 197, 253); }
+        }
+        .animate-pulse-border { animation: pulse-border 2s infinite; }
+        
+        /* 스크롤바 스타일 */
+        .custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #555; }
+    </style>
+</head>
+<body class="bg-gray-50" x-data="{ showNewJob: false, darkMode: false }">
+    
+    <!-- 헤더 -->
+    <header class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center">
+                    <span class="text-2xl mr-3">🕷️</span>
+                    <h1 class="text-xl font-bold text-gray-900">크롤링 마스터</h1>
+                    <span class="ml-3 px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">v1.0</span>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <!-- 통계 -->
+                    <div class="hidden md:flex items-center space-x-6 text-sm">
+                        <div class="flex items-center">
+                            <span class="text-gray-500">활성:</span>
+                            <span class="ml-1 font-semibold text-blue-600">{{ active_count }}</span>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="text-gray-500">완료:</span>
+                            <span class="ml-1 font-semibold text-green-600">{{ completed_count }}</span>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="text-gray-500">수집:</span>
+                            <span class="ml-1 font-semibold text-purple-600">{{ total_collected }}</span>
+                        </div>
+                    </div>
+                    
+                    <!-- 새 작업 버튼 -->
+                    <button @click="showNewJob = true" 
+                            class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 transition-all hover:scale-105">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                        </svg>
+                        <span>새 크롤링</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+    
+    <!-- 메인 콘텐츠 -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <!-- 빠른 크롤링 섹션 -->
+        <div class="bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl p-6 mb-8 text-white">
+            <h2 class="text-2xl font-bold mb-4">⚡ 빠른 크롤링</h2>
+            <form hx-post="/quick-crawl" 
+                  hx-target="#quick-result" 
+                  hx-indicator="#quick-loading"
+                  class="flex gap-4">
+                <input type="url" 
+                       name="url" 
+                       placeholder="https://example.com - URL만 입력하면 자동으로 데이터를 찾아드려요!" 
+                       required
+                       class="flex-1 px-4 py-3 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-white">
+                <button type="submit" 
+                        class="bg-white text-blue-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-all hover:scale-105">
+                    자동 크롤링
+                </button>
+            </form>
+            <div id="quick-loading" class="htmx-indicator mt-4">
+                <div class="flex items-center text-white">
+                    <svg class="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    분석 중...
+                </div>
+            </div>
+            <div id="quick-result" class="mt-4"></div>
+        </div>
+        
+        <!-- 작업 목록 -->
+        <div class="bg-white rounded-xl shadow-sm p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-semibold text-gray-900">크롤링 작업 목록</h2>
+                <div class="flex gap-2">
+                    <button onclick="location.reload()" 
+                            class="text-gray-400 hover:text-gray-600 transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- 작업 카드 그리드 -->
+            <div id="jobs-container" class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {% for job in jobs %}
+                <div id="job-{{ job.id }}" 
+                     class="bg-white rounded-lg shadow p-6 border-l-4 border-{% if job.status.value == 'completed' %}green{% elif job.status.value == 'failed' %}red{% elif job.status.value == 'running' %}blue{% else %}gray{% endif %}-500"
+                     {% if job.status.value == 'running' %}
+                     hx-get="/jobs/{{ job.id }}/status"
+                     hx-trigger="every 1s"
+                     hx-swap="outerHTML"
+                     {% endif %}>
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="flex-1 min-w-0">
+                            <h3 class="text-lg font-semibold truncate">{{ job.name }}</h3>
+                            <p class="text-sm text-gray-500 truncate">{{ job.url }}</p>
+                        </div>
+                        <span class="ml-2 px-3 py-1 
+                            {% if job.status.value == 'completed' %}bg-green-100 text-green-800
+                            {% elif job.status.value == 'failed' %}bg-red-100 text-red-800
+                            {% elif job.status.value == 'running' %}bg-blue-100 text-blue-800
+                            {% else %}bg-gray-100 text-gray-800{% endif %}
+                            rounded-full text-sm whitespace-nowrap">
+                            {{ job.status.value }}
+                        </span>
+                    </div>
+                    
+                    <div class="w-full bg-gray-200 rounded-full h-2 mb-2">
+                        <div class="bg-{% if job.status.value == 'completed' %}green{% elif job.status.value == 'failed' %}red{% else %}blue{% endif %}-500 h-2 rounded-full transition-all duration-300" 
+                             style="width: {{ job.progress }}%"></div>
+                    </div>
+                    
+                    <div class="flex justify-between text-sm text-gray-600">
+                        <span>수집: {{ job.collected_items }}/{{ job.total_items }}</span>
+                        <span>{{ job.progress }}%</span>
+                    </div>
+                    
+                    {% if job.status.value == 'completed' and job.result_file %}
+                    <div class="mt-4 flex gap-2">
+                        <a href="/downloads/{{ job.result_file }}.xlsx" 
+                           class="flex-1 px-3 py-2 bg-green-500 text-white text-center rounded hover:bg-green-600 transition-colors">
+                            📊 엑셀 다운로드
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+                
+                {% if not jobs %}
+                <div class="col-span-full text-center py-12 text-gray-400">
+                    <svg class="w-16 h-16 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    <p class="text-lg">아직 크롤링 작업이 없습니다</p>
+                    <p class="text-sm mt-2">위의 '새 크롤링' 버튼을 눌러 시작하세요!</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </main>
+    
+    <!-- 새 작업 모달 -->
+    <div x-show="showNewJob" 
+         x-cloak
+         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+         @click.self="showNewJob = false">
+        <div class="bg-white rounded-xl p-6 w-full max-w-lg mx-4 transform transition-all"
+             x-show="showNewJob"
+             x-transition:enter="ease-out duration-300"
+             x-transition:enter-start="opacity-0 scale-90"
+             x-transition:enter-end="opacity-100 scale-100">
+            
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold">새 크롤링 작업</h2>
+                <button @click="showNewJob = false" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            
+            <form hx-post="/jobs/create" 
+                  hx-target="#jobs-container" 
+                  hx-swap="afterbegin"
+                  @htmx:after-request="showNewJob = false"
+                  class="space-y-4">
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">작업 이름</label>
+                    <input type="text" 
+                           name="name" 
+                           required
+                           placeholder="예: 네이버 뉴스 크롤링"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">대상 URL</label>
+                    <input type="url" 
+                           name="url" 
+                           required
+                           placeholder="https://example.com"
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        CSS 선택자 (필드명: 선택자)
+                    </label>
+                    <textarea name="selectors" 
+                              rows="6"
+                              placeholder="title: h1.article-title
+content: div.article-content
+author: span.author-name
+date: time.published-date
+image: img.main-image"
+                              class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"></textarea>
+                    <p class="text-xs text-gray-500 mt-1">각 줄에 '필드명: CSS선택자' 형식으로 입력</p>
+                </div>
+                
+                <div class="flex justify-end gap-3 pt-4">
+                    <button type="button" 
+                            @click="showNewJob = false"
+                            class="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors">
+                        취소
+                    </button>
+                    <button type="submit" 
+                            class="px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+                        크롤링 시작
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- 토스트 알림 -->
+    <div id="toast-container" class="fixed bottom-4 right-4 z-50 space-y-2"></div>
+    
+    <script>
+        // 로그 토글
+        function toggleLogs(jobId) {
+            const logs = document.getElementById(`logs-${jobId}`);
+            logs.classList.toggle('hidden');
+        }
+        
+        // HTMX 이벤트 리스너
+        document.body.addEventListener('htmx:afterRequest', function(evt) {
+            if (evt.detail.successful) {
+                showToast('작업이 시작되었습니다!', 'success');
+            }
+        });
+        
+        // 토스트 알림
+        function showToast(message, type = 'info') {
+            const colors = {
+                'success': 'bg-green-500',
+                'error': 'bg-red-500',
+                'info': 'bg-blue-500',
+                'warning': 'bg-yellow-500'
+            };
+            
+            const toast = document.createElement('div');
+            toast.className = `${colors[type]} text-white px-4 py-3 rounded-lg shadow-lg transform transition-all duration-300 translate-x-full`;
+            toast.innerHTML = message;
+            
+            document.getElementById('toast-container').appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.remove('translate-x-full');
+            }, 100);
+            
+            setTimeout(() => {
+                toast.classList.add('translate-x-full');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
