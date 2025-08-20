@@ -1,0 +1,37 @@
+<!-- HTMX 부분 템플릿: 작업 상태 -->
+{% if job.status.value == 'running' %}
+    <div class="mb-2">
+        <div class="flex justify-between text-sm mb-1">
+            <span>진행중...</span>
+            <span>{{ job.progress }}%</span>
+        </div>
+        <div class="w-full bg-gray-700 rounded-full h-2">
+            <div class="bg-blue-500 h-2 rounded-full transition-all duration-300" 
+                 style="width: {{ job.progress }}%"></div>
+        </div>
+    </div>
+    <p class="text-xs text-gray-400">수집: {{ job.collected_items }} / {{ job.total_items }}</p>
+{% endif %}
+
+{% if job.status.value == 'completed' %}
+    <div class="flex items-center justify-between">
+        <p class="text-sm text-green-400">✅ 완료: {{ job.data|length }}개 항목</p>
+        {% if job.result_file %}
+            <a href="/downloads/{{ job.result_file }}" 
+               class="px-3 py-1 bg-green-500/20 hover:bg-green-500/30 rounded text-sm text-green-400 transition">
+                📥 다운로드
+            </a>
+        {% endif %}
+    </div>
+{% endif %}
+
+{% if job.status.value == 'failed' %}
+    <p class="text-sm text-red-400">❌ 실패</p>
+    {% if job.logs %}
+        <p class="text-xs text-gray-400 mt-1">{{ job.logs[-1] }}</p>
+    {% endif %}
+{% endif %}
+
+{% if job.status.value == 'pending' %}
+    <p class="text-sm text-gray-400">⏳ 대기중...</p>
+{% endif %}

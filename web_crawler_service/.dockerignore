@@ -1,0 +1,61 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+*.egg-info/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Git
+.git/
+.gitignore
+
+# Testing
+test_*.py
+pytest.ini
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Local files
+*.log
+.env
+*.db
+*.sqlite
+*.sqlite3
+
+# Build files
+dist/
+build/
+*.spec
+
+# Documentation
+*.md
+docs/
+
+# Docker files (not needed in build context)
+Dockerfile
+docker-compose.yml
+docker-compose.*.yml
+
+# Fly.io
+fly.toml
+
+# Downloads (will be created at runtime)
+downloads/
+demo_results/
+*.xlsx
+*.csv
+*.json

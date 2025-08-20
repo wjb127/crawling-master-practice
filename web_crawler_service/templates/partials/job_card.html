@@ -1,0 +1,24 @@
+<!-- HTMX 부분 템플릿: 작업 카드 -->
+<div id="job-{{ job.id }}" class="bg-white/10 backdrop-blur rounded-lg p-4 border border-white/20">
+    <div class="flex justify-between items-start mb-3">
+        <div>
+            <h3 class="font-semibold text-lg">{{ job.name }}</h3>
+            <p class="text-sm text-gray-400">{{ job.url }}</p>
+        </div>
+        <span class="px-2 py-1 rounded text-xs
+            {% if job.status.value == 'completed' %}bg-green-500/20 text-green-400{% endif %}
+            {% if job.status.value == 'running' %}bg-blue-500/20 text-blue-400{% endif %}
+            {% if job.status.value == 'pending' %}bg-gray-500/20 text-gray-400{% endif %}
+            {% if job.status.value == 'failed' %}bg-red-500/20 text-red-400{% endif %}">
+            {{ job.status.value }}
+        </span>
+    </div>
+    
+    <div hx-get="/jobs/{{ job.id }}/status" 
+         hx-trigger="every 2s"
+         hx-target="#job-status-{{ job.id }}">
+        <div id="job-status-{{ job.id }}">
+            {% include 'partials/job_status.html' %}
+        </div>
+    </div>
+</div>
