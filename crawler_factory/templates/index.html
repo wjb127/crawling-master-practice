@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏭 크롤러 팩토리 - 맞춤형 크롤러 자동 생성</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <style>
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .loading { animation: pulse 2s infinite; }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 min-h-screen">
+    <div class="container mx-auto px-4 py-8" x-data="crawlerFactory()">
+        <!-- Header -->
+        <header class="text-center mb-10">
+            <h1 class="text-5xl font-bold text-white mb-4">
+                🏭 크롤러 팩토리
+            </h1>
+            <p class="text-xl text-gray-300">
+                고객 맞춤형 윈도우 크롤러를 자동으로 생성합니다
+            </p>
+        </header>
+
+        <!-- Main Form -->
+        <div class="max-w-4xl mx-auto">
+            <div class="bg-white/10 backdrop-blur-md rounded-lg shadow-xl p-8">
+                <form @submit.prevent="generateCrawler">
+                    <!-- Basic Info -->
+                    <div class="mb-8">
+                        <h2 class="text-2xl font-semibold text-white mb-4">📋 기본 정보</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-gray-300 mb-2">프로젝트명</label>
+                                <input type="text" x-model="formData.project_name" 
+                                       class="w-full px-4 py-2 bg-white/20 text-white rounded-lg focus:bg-white/30 focus:outline-none"
+                                       placeholder="예: NaverCrawler" required>
+                            </div>
+                            <div>
+                                <label class="block text-gray-300 mb-2">회사명</label>
+                                <input type="text" x-model="formData.company_name"
+                                       class="w-full px-4 py-2 bg-white/20 text-white rounded-lg focus:bg-white/30 focus:outline-none"
+                                       placeholder="예: ABC Company">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Target Sites -->
+                    <div class="mb-8">
+                        <h2 class="text-2xl font-semibold text-white mb-4">🎯 대상 사이트</h2>
+                        <div class="space-y-2">
+                            <template x-for="(site, index) in formData.target_sites" :key="index">
+                                <div class="flex gap-2">
+                                    <input type="url" x-model="formData.target_sites[index]"
+                                           class="flex-1 px-4 py-2 bg-white/20 text-white rounded-lg focus:bg-white/30 focus:outline-none"
+                                           placeholder="https://example.com">
+                                    <button type="button" @click="removeSite(index)"
+                                            class="px-3 py-2 bg-red-500/50 text-white rounded-lg hover:bg-red-500/70">
+                                        삭제
+                                    </button>
+                                </div>
+                            </template>
+                            <button type="button" @click="addSite()"
+                                    class="px-4 py-2 bg-blue-500/50 text-white rounded-lg hover:bg-blue-500/70">
+                                + 사이트 추가
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Data Fields -->
+                    <div class="mb-8">
+                        <h2 class="text-2xl font-semibold text-white mb-4">📊 수집 데이터 필드</h2>
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+                            <template x-for="(field, index) in formData.data_fields" :key="index">
+                                <div class="flex gap-1">
+                                    <input type="text" x-model="formData.data_fields[index]"
+                                           class="flex-1 px-3 py-2 bg-white/20 text-white rounded-lg focus:bg-white/30 focus:outline-none text-sm"
+                                           placeholder="필드명">
+                                    <button type="button" @click="removeField(index)"
+                                            class="px-2 py-1 bg-red-500/50 text-white rounded text-sm hover:bg-red-500/70">
+                                        ✕
+                                    </button>
+                                </div>
+                            </template>
+                            <button type="button" @click="addField()"
+                                    class="px-3 py-2 bg-blue-500/50 text-white rounded-lg hover:bg-blue-500/70 text-sm">
+                                + 필드 추가
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Options -->
+                    <div class="mb-8">
+                        <h2 class="text-2xl font-semibold text-white mb-4">⚙️ 옵션 설정</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-gray-300 mb-2">출력 형식</label>
+                                <select x-model="formData.output_format"
+                                        class="w-full px-4 py-2 bg-white/20 text-white rounded-lg focus:bg-white/30 focus:outline-none">
+                                    <option value="excel">Excel (.xlsx)</option>
+                                    <option value="csv">CSV (.csv)</option>
+                                    <option value="json">JSON (.json)</option>
+                                    <option value="database">Database</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-gray-300 mb-2">크롤링 방식</label>
+                                <select x-model="formData.crawling_method"
+                                        class="w-full px-4 py-2 bg-white/20 text-white rounded-lg focus:bg-white/30 focus:outline-none">
+                                    <option value="static">정적 (BeautifulSoup)</option>
+                                    <option value="dynamic">동적 (Selenium)</option>
+                                    <option value="api">API 기반</option>
+                                    <option value="hybrid">하이브리드</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Feature Toggles -->
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                            <label class="flex items-center text-gray-300">
+                                <input type="checkbox" x-model="formData.login_required" class="mr-2">
+                                로그인 필요
+                            </label>
+                            <label class="flex items-center text-gray-300">
+                                <input type="checkbox" x-model="formData.schedule_required" class="mr-2">
+                                스케줄링
+                            </label>
+                            <label class="flex items-center text-gray-300">
+                                <input type="checkbox" x-model="formData.proxy_support" class="mr-2">
+                                프록시 지원
+                            </label>
+                            <label class="flex items-center text-gray-300">
+                                <input type="checkbox" x-model="formData.multi_threading" class="mr-2">
+                                멀티스레딩
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Presets -->
+                    <div class="mb-8">
+                        <h2 class="text-2xl font-semibold text-white mb-4">🎨 프리셋 템플릿</h2>
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                            <template x-for="preset in presets" :key="preset.id">
+                                <button type="button" @click="loadPreset(preset)"
+                                        class="p-3 bg-gradient-to-r from-purple-500/30 to-blue-500/30 text-white rounded-lg hover:from-purple-500/50 hover:to-blue-500/50 text-left">
+                                    <div class="font-semibold" x-text="preset.name"></div>
+                                    <div class="text-xs opacity-80" x-text="preset.description"></div>
+                                </button>
+                            </template>
+                        </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <div class="flex justify-center">
+                        <button type="submit" 
+                                class="px-8 py-3 bg-gradient-to-r from-green-500 to-blue-500 text-white font-bold rounded-lg hover:from-green-600 hover:to-blue-600 transform hover:scale-105 transition-all"
+                                :disabled="generating">
+                            <span x-show="!generating">🚀 크롤러 생성 시작</span>
+                            <span x-show="generating" class="loading">⏳ 생성 중...</span>
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Progress Display -->
+            <div x-show="jobId" class="mt-8 bg-white/10 backdrop-blur-md rounded-lg shadow-xl p-8">
+                <h3 class="text-2xl font-semibold text-white mb-4">📈 생성 진행 상황</h3>
+                <div class="mb-4">
+                    <div class="bg-gray-700 rounded-full h-6 overflow-hidden">
+                        <div class="bg-gradient-to-r from-green-500 to-blue-500 h-full transition-all duration-500"
+                             :style="`width: ${progress}%`"></div>
+                    </div>
+                    <div class="text-center text-white mt-2" x-text="`${progress}%`"></div>
+                </div>
+                <div class="text-gray-300">
+                    <p>작업 ID: <span x-text="jobId" class="font-mono"></span></p>
+                    <p>상태: <span x-text="status" class="font-semibold"></span></p>
+                    <p x-show="error" class="text-red-400">오류: <span x-text="error"></span></p>
+                </div>
+                <div x-show="status === 'completed'" class="mt-4">
+                    <a :href="`/api/download/${jobId}`" 
+                       class="inline-block px-6 py-3 bg-green-500 text-white font-bold rounded-lg hover:bg-green-600">
+                        📥 크롤러 패키지 다운로드
+                    </a>
+                </div>
+            </div>
+
+            <!-- Examples Section -->
+            <div class="mt-8 bg-white/10 backdrop-blur-md rounded-lg shadow-xl p-8">
+                <h3 class="text-2xl font-semibold text-white mb-4">💡 사용 예시</h3>
+                <div class="space-y-4">
+                    <template x-for="example in examples" :key="example.title">
+                        <div class="p-4 bg-white/10 rounded-lg">
+                            <h4 class="font-semibold text-white mb-2" x-text="example.title"></h4>
+                            <p class="text-gray-300 text-sm mb-2" x-text="example.description"></p>
+                            <button @click="loadExample(example)" 
+                                    class="text-blue-400 hover:text-blue-300 text-sm">
+                                → 이 예시로 시작하기
+                            </button>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function crawlerFactory() {
+            return {
+                formData: {
+                    project_name: '',
+                    company_name: '',
+                    target_sites: [''],
+                    data_fields: ['제목', '내용', '작성자', '날짜'],
+                    output_format: 'excel',
+                    crawling_method: 'static',
+                    login_required: false,
+                    schedule_required: false,
+                    proxy_support: false,
+                    multi_threading: true,
+                    error_retry: true,
+                    custom_features: []
+                },
+                presets: [],
+                examples: [],
+                generating: false,
+                jobId: null,
+                status: null,
+                progress: 0,
+                error: null,
+                
+                async init() {
+                    // Load presets
+                    const presetsRes = await fetch('/api/presets');
+                    this.presets = await presetsRes.json();
+                    
+                    // Load examples
+                    const examplesRes = await fetch('/api/examples');
+                    this.examples = await examplesRes.json();
+                },
+                
+                addSite() {
+                    this.formData.target_sites.push('');
+                },
+                
+                removeSite(index) {
+                    this.formData.target_sites.splice(index, 1);
+                },
+                
+                addField() {
+                    this.formData.data_fields.push('');
+                },
+                
+                removeField(index) {
+                    this.formData.data_fields.splice(index, 1);
+                },
+                
+                loadPreset(preset) {
+                    this.formData.data_fields = [...preset.data_fields];
+                    this.formData.custom_features = preset.features || [];
+                    
+                    // Set appropriate options based on preset
+                    if (preset.id === 'ecommerce') {
+                        this.formData.crawling_method = 'dynamic';
+                        this.formData.multi_threading = true;
+                    } else if (preset.id === 'news') {
+                        this.formData.crawling_method = 'static';
+                    } else if (preset.id === 'social') {
+                        this.formData.login_required = true;
+                        this.formData.crawling_method = 'api';
+                    }
+                },
+                
+                loadExample(example) {
+                    Object.assign(this.formData, example.requirements);
+                },
+                
+                async generateCrawler() {
+                    this.generating = true;
+                    this.jobId = null;
+                    this.status = null;
+                    this.progress = 0;
+                    this.error = null;
+                    
+                    try {
+                        // Submit generation request
+                        const response = await fetch('/api/generate', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(this.formData)
+                        });
+                        
+                        const result = await response.json();
+                        this.jobId = result.job_id;
+                        
+                        // Poll for status
+                        this.pollStatus();
+                        
+                    } catch (error) {
+                        this.error = error.message;
+                        this.generating = false;
+                    }
+                },
+                
+                async pollStatus() {
+                    if (!this.jobId) return;
+                    
+                    try {
+                        const response = await fetch(`/api/status/${this.jobId}`);
+                        const data = await response.json();
+                        
+                        this.status = data.status;
+                        this.progress = data.progress;
+                        this.error = data.error;
+                        
+                        if (data.status === 'processing' || data.status === 'generating') {
+                            // Continue polling
+                            setTimeout(() => this.pollStatus(), 1000);
+                        } else {
+                            // Completed or failed
+                            this.generating = false;
+                        }
+                    } catch (error) {
+                        this.error = error.message;
+                        this.generating = false;
+                    }
+                }
+            }
+        }
+    </script>
+</body>
+</html>
