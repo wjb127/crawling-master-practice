@@ -1,0 +1,45 @@
+# Fly.io 최적화 Dockerfile
+FROM python:3.11-slim
+
+# 작업 디렉토리 설정
+WORKDIR /app
+
+# 시스템 패키지 업데이트 및 필수 도구 설치
+RUN apt-get update && apt-get install -y \
+    gcc \
+    curl \
+    chromium \
+    chromium-driver \
+    && rm -rf /var/lib/apt/lists/*
+
+# Chrome 환경변수 설정 (Selenium 사용 시)
+ENV CHROME_BIN=/usr/bin/chromium
+ENV CHROMEDRIVER_PATH=/usr/bin/chromedriver
+
+# web_crawler_service 디렉토리의 requirements.txt 복사 및 설치
+COPY web_crawler_service/requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# web_crawler_service의 애플리케이션 파일 복사
+COPY web_crawler_service/simple_main.py .
+COPY web_crawler_service/demo_portfolio.py .
+COPY web_crawler_service/templates/ ./templates/
+
+# 다운로드 디렉토리 생성
+RUN mkdir -p downloads demo_results
+
+# 비root 사용자 생성 및 권한 설정
+RUN useradd -m -u 1001 appuser && \
+    chown -R appuser:appuser /app
+USER appuser
+
+# 포트 설정
+EXPOSE 8080
+
+# 헬스체크
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8080/ || exit 1
+
+# 프로덕션 서버 실행
+CMD ["uvicorn", "simple_main:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "2"]
