@@ -314,6 +314,28 @@ async def create_job(
     """
 
 
+@app.delete("/jobs/clear", response_class=HTMLResponse)
+async def clear_all_jobs():
+    """모든 작업 삭제"""
+    jobs_store.clear()
+    return """
+    <div hx-swap-oob="innerHTML:#jobs-list">
+        <div class="text-center text-gray-500 py-8">
+            <p>모든 작업이 삭제되었습니다</p>
+            <p class="text-sm mt-2">새로운 크롤링 작업을 시작하세요</p>
+        </div>
+    </div>
+    """
+
+
+@app.delete("/jobs/{job_id}", response_class=HTMLResponse)
+async def delete_job(job_id: str):
+    """개별 작업 삭제"""
+    if job_id in jobs_store:
+        del jobs_store[job_id]
+    return ""  # HTMX will remove the element
+
+
 @app.get("/jobs/{job_id}/status", response_class=HTMLResponse)
 async def get_job_status(job_id: str):
     """작업 상태 조회"""
